@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>微習慣追蹤</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode.js@1.4.4/lib/qrcode.min.js"></script>
+</head>
+<body>
+
+  <!-- 分享模式檢視 -->
+  <div id="shareView" style="display:none; text-align:center; padding:20px; max-width:600px; margin:auto;">
+    <h2 id="shareTitle">載入中...</h2>
+    <div id="shareContent" style="font-size:1.8em; padding:40px; margin:30px 0; min-height:100px;">載入中...</div>
+    
+    <div id="shareWeeklyProgress" style="margin-top:30px; font-size:1.2em; white-space: pre-wrap; text-align:left; max-width:90%; margin:auto; background:#f9f9f9; padding:15px; border-radius:8px; display:none;">
+      <strong>每週進展：</strong><br><span id="progressText"></span>
+    </div>
+
+    <div id="loginAndRecordForm" style="display:none; margin-top:40px; text-align:left;">
+      <h3 style="color:#4CAF50;">本週尚未提交，請直接在此登入並填寫</h3>
+      <input id="loginUserId" placeholder="User ID" style="width:100%; padding:10px; margin:10px 0;" />
+      <input id="loginPassword" type="password" placeholder="Password" style="width:100%; padding:10px; margin:10px 0;" />
+      <button onclick="loginFromShare()" style="padding:10px 20px; background:#4CAF50; color:white; border:none; border-radius:4px;">登入並填寫本週</button>
+      <p id="loginError" style="color:red; margin-top:10px;"></p>
+      
+      <div id="recordingForm" style="display:none; margin-top:30px; border-top:2px solid #eee; padding-top:20px;">
+        <h3>本週輸入 (第 <span id="currentWeekShare"></span> 週)</h3>
+        
+        <label>我的稱號：</label>
+        <input id="userTitleInputShare" style="width:100%; padding:10px; margin:10px 0;" placeholder="例如：耶穌的好友" />
+
+        <label>我的身份：</label>
+        <input id="identityShare" style="width:100%; padding:10px; margin:10px 0;" placeholder="例如：我是一個重視與神的關係的人" />
+        
+        <label>目前的微習慣（不可改）：</label>
+        <input id="currentHabitShare" readonly style="width:100%; padding:10px; margin:10px 0; background:#f0f0f0;" />
+        
+        <label>每週進展（可選填）：</label>
+        <textarea id="weeklyProgressShare" rows="4" style="width:100%; padding:10px; margin:10px 0; resize:vertical;" placeholder="分享這週的靈修心得..."></textarea>
+        
+        <div style="margin:20px 0;">
+          <label>更換微習慣？</label><br>
+          <button id="changeNoShare" onclick="toggleChangeShare(false)" style="background:#ccc; padding:8px 16px;">否</button>
+          <button id="changeYesShare" onclick="toggleChangeShare(true)" style="padding:8px 16px;">是</button>
+        </div>
+        
+        <div id="newHabitDivShare" style="display:none;">
+          <label>新微習慣 (每當If...我就Then...)：</label>
+          <input id="newHabitShare" style="width:100%; padding:10px; margin:10px 0;" placeholder="例如：每當我起床，我就先祈禱5分鐘" />
+        </div>
+        
+        <button onclick="saveFromShare()" style="padding:12px 24px; background:#4CAF50; color:white; border:none; border-radius:6px; font-size:1.1em; width:100%;">確認打卡！</button>
+        <p id="submitMsgShare" style="margin-top:10px; color:green; font-weight:bold;"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 標準登入與主介面 -->
+  <div id="appView">
+    <div id="login">
+      <h1>微習慣追蹤</h1>
+      <input id="userId" placeholder="User ID" />
+      <input id="password" type="password" placeholder="Password" />
+      <button onclick="loginUser()">登入</button>
+      <p id="error" style="color:red;"></p>
+    </div>
+    
+    <div id="main" style="display:none;">
+      <h1>歡迎，<span id="userNameHeader"></span></h1>
+      
+      <div id="streakDisplay" style="font-size: 1.2em; font-weight: bold; color: #e67e22; margin: 10px 0; display:none;"></div>
+
+      <div class="nav-buttons">
+        <button onclick="showRecording()">本週打卡</button>
+        <button onclick="showReview()">進度一覽</button>
+        <button id="shareBtn" style="display:none;" onclick="showShareAdmin()">分享本周立志</button>
+        <button id="adminBtn" style="display:none;" onclick="showAdmin()">Admin View</button>
+        <button onclick="logout()">登出</button>
+      </div>
+      
+      <!-- 本週輸入區 -->
+      <div id="recording" style="display:none;">
+        <h2>本週打卡 (第 <span id="currentWeek"></span> 週)</h2>
+        
+        <label>我的稱號（身份的概括，如：耶穌的好友）：</label>
+        <input id="userTitleInput" style="width:100%" placeholder="例如：耶穌的好友" />
+
+        <label>我的身份：</label>
+        <input id="identity" style="width:100%" placeholder="例如：我是一個重視與神的關係，每天會跟神親近的人。" />
+        
+        <label>目前的微習慣：</label>
+        <input id="currentHabit" readonly style="background:#f0f0f0;" />
+        
+        <label>每週進展（可選填）：</label>
+        <textarea id="weeklyProgress" rows="4" style="width:100%; resize:vertical;" placeholder="分享這週的靈修心得、生命掙扎、感恩或特別經歷..."></textarea>
+        
+        <div style="margin:20px 0; background: #fff8dc; padding: 12px; border-radius: 6px; border-left: 4px solid #ffcc00;">
+          <label style="font-weight: bold;">💡 彈性調整微習慣？</label>
+          <p style="font-size:0.85em; color:#666; margin: 4px 0 10px 0;">溫馨提示：微習慣的精髓在於微小、無痛、能持續。執行時感到吃力嗎？試試把習慣縮小 10 倍再重新出發吧！</p>
+          <button id="changeNo" onclick="toggleChange(false)">維持原樣</button>
+          <button id="changeYes" onclick="toggleChange(true)">彈性調整</button>
+        </div>
+        
+        <div id="newHabitDiv" style="display:none;">
+          <label>微調後的微習慣 (每當If...我就Then...)：</label>
+          <input id="newHabit" style="width:100%" placeholder="例如：每當我坐下，我就為身邊人默默代禱10秒" />
+        </div>
+        
+        <button id="dynamicSubmitBtn" onclick="saveRecording()" style="background:#4CAF50; color:white; width:100%; font-size:1.1em; padding:15px; border:none;">確認打卡！</button>
+        <p id="submitMsg" style="color:green; font-weight:bold; margin-top:10px;"></p>
+      </div>
+      
+      <!-- 進度一覽區 -->
+      <div id="review" style="display:none;">
+        <h2>進度一覽</h2>
+        <button onclick="showTable()">歷史列表</button>
+        <button onclick="showChart()">走勢圖（回顧上半年）</button>
+        
+        <div id="tableView" style="display:none;">
+          <h3 id="identityTitle"></h3>
+          <table id="userHistoryTable"><thead><tr><th>週數</th><th>微習慣</th><th>狀態/分數</th></tr></thead><tbody></tbody></table>
+        </div>
+        
+        <div id="chartView" style="display:none; height:400px; margin-top:20px;">
+          <h3 id="identityTitleChart"></h3>
+          <canvas id="lineChart"></canvas>
+        </div>
+      </div>
+      
+      <!-- Admin 總覽區 -->
+      <div id="adminView" style="display:none;">
+        <h2>Admin 全員數據與代禱字卡</h2>
+        
+        <div style="margin-bottom: 20px; background: #eef7f2; padding: 15px; border-radius: 8px;">
+          <h3>✨ 本週小組代禱字卡產生器</h3>
+          <button onclick="generatePrayerCards()" style="background:#2c3e50; color:#fff;">生成代禱字卡</button>
+          <div id="prayerCardsContainer" style="margin-top: 15px;"></div>
+        </div>
+
+        <label>篩選 姓名/稱號: <input id="filterUser" oninput="filterAdminTable()" placeholder="輸入關鍵字"/></label>
+        <label>排序 Week: 
+          <select id="sortWeek" onchange="filterAdminTable()">
+            <option value="desc">最新先</option>
+            <option value="asc">最舊先</option>
+          </select>
+        </label>
+        <table id="adminTable"><thead><tr><th>姓名[稱號]</th><th>週數</th><th>微習慣</th><th>打卡記錄/分數</th></tr></thead><tbody></tbody></table>
+      </div>
+      
+      <!-- QR 分享區 -->
+      <div id="shareAdmin" style="display:none;">
+        <h2>本周立志分享 QR Code (第 <span id="shareWeekDisplay"></span> 週)</h2>
+        <button onclick="generateQRCodes()">產生 QR Code 表格</button>
+        <div id="qrContainer"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
